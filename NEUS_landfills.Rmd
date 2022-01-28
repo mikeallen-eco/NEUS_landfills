@@ -95,7 +95,7 @@ ggplot(la_sf) +
  ggsave("figures/landfill_locs.pdf", 
         height = 6, width = 6, dpi = 600)
  ggsave("figures/landfill_locs.png", 
-        height = 6, width = 6, dpi = 150)
+        height = 6, width = 6, dpi = 300)
 
 ```
 # Size of closed and soon-to-close landfills
