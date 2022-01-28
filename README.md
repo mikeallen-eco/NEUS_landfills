@@ -3,6 +3,4 @@ This code compiles and maps data on closed and active landfills in the USA, Nort
 
 Allen, M. C. (2021). Landfills as islands of grassland biodiversity: placing a next-generation habitat restoration plan in context. Ecological Restoration, 39:284-287.
 
-![The San Juan Mountains are beautiful!](/assets/images/san-juan-mountains.jpg "San Juan Mountains")
-
-![The San Juan Mountains are beautiful!](/assets/images/san-juan-mountains.jpg "San Juan Mountains")
+![Map of landfills in the Northeast](https://github.com/mikeallen-eco/NEUS_landfills/blob/main/figures/landfill_locs.png "San Juan Mountains")
