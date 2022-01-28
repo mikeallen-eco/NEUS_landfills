@@ -1,0 +1,135 @@
+---
+title: "Code and data from: 'Landfills as islands of grassland biodiversity: placing a next-generation habitat restoration plan in context.'"
+author: "Mike Allen"
+date: "7/27/2021"
+output: html_document
+---
+# Background
+This code compiles and maps data on closed and active landfills in the USA, Northeast / Mid-Atlantic region. It is based on the US EPA's [LMOP Landfill and Project Database](https://www.epa.gov/lmop/lmop-landfill-and-project-database) (USEPA 2021). It was used to create the following map and figure that appeared in Allen (Ecological Restoration, 2021): "Landfills as islands of grassland biodiversity: placing a next-generation habitat restoration plan in context."
+
+# Load data and libraries 
+```{r}
+library(tidyverse) # version: tidyverse_1.3.1
+
+# read in LMOP data from each state
+nj <- read.csv("data/lmopdatanj.csv")
+ny <- read.csv("data/lmopdatany.csv")
+pa <- read.csv("data/lmopdatapa.csv")
+ma <- read.csv("data/lmopdatama.csv")
+ri <- read.csv("data/lmopdatari.csv")
+ct <- read.csv("data/lmopdatact.csv")
+de <- read.csv("data/lmopdatade.csv")
+md <- read.csv("data/lmopdatamd.csv")
+
+# combine all into one data frame
+la_raw <- rbind(nj, ny, pa, ma, ri, ct, de, md); rm(nj, ny, pa, ma, ri, ct, de, md)
+
+# clean variable names and select relevant variables
+la <- la_raw %>% 
+  mutate(tons_waste = 
+           as.numeric(gsub(Waste.in.Place..tons., pattern = ",", replacement = ""))) %>%
+  select(name = Landfill.Name, 
+         lat = Latitude, 
+         lon = Longitude, 
+         State,
+         County,
+         City,
+         tons_waste,
+         open = Year.Landfill.Opened,
+         closed = Landfill.Closure.Year,
+         status =Current.Landfill.Status) %>%
+  distinct() %>%
+  # create closed/open/soon-to-close categories
+  mutate(Status = case_when(status == "Closed" ~ "Closed",
+                             status == "Open" & 
+                              closed %in% 2021:2050 ~ 
+                              "Closed by 2050",
+                             TRUE ~ "Open"))
+
+# make the dataframe into a spatial point object
+la_sf <- la %>%
+  mutate(latitude = lat, longitude = lon) %>%
+  filter(is.na(latitude)==FALSE) %>%
+  sf::st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
+
+# subset dataset into a smaller region
+lr <- la %>%
+  filter(State %in% c("NJ", "NY", "PA"))
+
+# make that spatial
+lr_sf <- la_sf %>%
+  filter(State %in% c("NJ", "NY", "PA"))
+
+# load boundaries of US states
+states <- rnaturalearth::ne_states(returnclass = "sf", country = c("United States of America", "Canada"))
+```
+
+# Map of landfills
+```{r}
+ggplot(la_sf) +
+  geom_sf(data = states) +
+  geom_sf(aes(color = Status, shape = Status)) +
+  geom_sf(data = filter(la_sf, grepl(name, pattern = "Croton")), 
+          shape = "C", size = 10) +
+  scale_color_manual(values = c("black", "gray", "white")) +
+    coord_sf(xlim = c(-80.7, -69.5), ylim = c(37.5, 45.5), expand = FALSE) +
+  theme_bw() +
+  theme(legend.position = c(.8,0.2),
+        legend.background = element_rect(fill = "darkgray", color = "black"),
+        legend.key = element_rect(fill = "darkgray")) + 
+  labs(shape = "Landfill status", color = "Landfill status")  +
+  ggspatial::annotation_scale(
+    location = "bl",
+    bar_cols = c("grey60", "white")
+  ) +
+  ggspatial::annotation_north_arrow(
+    location = "tr", which_north = "true",
+    pad_x = unit(0.1, "in"), pad_y = unit(0.1, "in"),
+    style = ggspatial::north_arrow_nautical(
+      fill = c("grey40", "white"),
+      line_col = "grey20"
+    )
+  )
+
+# save plot
+ ggsave("figures/landfill_locs.pdf", 
+        height = 6, width = 6, dpi = 600)
+ ggsave("figures/landfill_locs.png", 
+        height = 6, width = 6, dpi = 72)
+
+```
+# Size of closed and soon-to-close landfills
+```{r}
+
+la %>%
+  filter(status == "Closed" | closed %in% 2021:2050  ) %>%
+ggplot() +
+  geom_histogram(aes(x = tons_waste), color = "gray") +
+  geom_vline(aes(xintercept = 10023234), color = "darkgray", linetype = 2, size = 2)  +
+  annotate(geom = "text", x = 12023234, y = 30, 
+           label = "Croton Point",
+           color = "darkgray",
+           hjust = 0) +
+  scale_x_log10() +
+  theme_bw() +
+  theme(text = element_text(size = 13)) +
+  labs(x = "Size of closed and soon-to-close landfills in the eastern US (tons)",
+       y = "Number of landfills")
+
+# save plot
+ggsave("figures/landfill_size.pdf", 
+       height = 6, width = 6, dpi = 600)
+ggsave("figures/landfill_size.png", 
+       height = 6, width = 6, dpi = 72)
+```
+
+# Session Info
+R version 4.1.2 (2021-11-01)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows 10 x64 (build 19043) 19043)
+
+# References
+Allen, M. C. (2021). Landfills as islands of grassland biodiversity: placing a next-generation habitat restoration plan in context. Ecological Restoration, 39:284-287.
+
+US EPA (US Environmental Protection Agency). 2021. LMOP Landfill
+and Project Database (accessed 28 July 2021). www.epa.gov/lmop/lmop-landfill-and-project-database.
